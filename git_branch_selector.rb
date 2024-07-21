@@ -25,7 +25,9 @@ end
 
 # Open the repository from the current directory
 begin
-  repo = Rugged::Repository.new('.')
+  repo_path = Dir.pwd
+  puts repo_path
+  repo = Rugged::Repository.new(repo_path)
 rescue Rugged::RepositoryError => e
   puts "Error: #{e.message}"
   exit 1
