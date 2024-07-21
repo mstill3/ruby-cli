@@ -53,10 +53,11 @@ max_authorname_length = branches.map { |branch| branch.target.author[:name].leng
 branches.each do |branch|
   head = branch.head? ? '*' : ' '
   refname = branch.name
-  committer_relative = time_ago_in_words(branch.target.time)
-  authorname = branch.target.author[:name]
-  objectname = branch.target.oid[0..6]
-  subject = branch.target.message.split("\n").first
+  commit = branch.target
+  committer_relative = time_ago_in_words(commit.time)
+  authorname = commit.author[:name]
+  objectname = commit.oid[0..6]
+  subject = commit.message.split("\n").first
 
   # Color each part individually
   colored_refname = pastel.yellow(refname.ljust(max_refname_length))
@@ -84,6 +85,11 @@ end
 selected_branch = selected_summary_detail[:branch]
 selected_detail = selected_summary_detail[:detail]
 
+# Print the selected branch details
+puts "You selected the branch: #{selected_branch.name}"
+puts selected_detail
+
 # Checkout the selected branch
 repo.checkout(selected_branch.name)
 puts "Checked out to branch: #{selected_branch.name}"
+
