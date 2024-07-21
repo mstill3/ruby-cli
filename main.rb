@@ -13,14 +13,14 @@ CLI::UI::Prompt.ask('What language/framework do you use?') do |handler|
 end
 
 working_dir = '.'
-git = Git.open(working_dir, :log => Logger.new(STDOUT))
+git = Git.open(working_dir)
 
 #g.index
 #g.index.readable?
 #g.index.writable?
 #g.repo
 
-git.log
+git.log.each {|l| puts l.sha }
   #.max_count(:all)
   #.object('README.md')
   #.since('10 years ago')
