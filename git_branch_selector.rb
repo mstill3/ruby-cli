@@ -1,8 +1,14 @@
 #!/usr/bin/env ruby
 
+#!/usr/bin/env ruby
+
 require 'rugged'
 require 'tty-prompt'
 require 'pastel'
+
+def valid_oid?(oid)
+  !!(oid =~ /\A[0-9a-f]{40}\z/)
+end
 
 # Define a method for relative time display
 def time_ago_in_words(time)
@@ -23,11 +29,10 @@ def time_ago_in_words(time)
   end
 end
 
-# Open the repository from the current directory
+# Open the repository from the current working directory
 begin
   repo_path = Dir.pwd
-  puts repo_path
-  repo = Rugged::Repository.new(repo_path)
+  repo = Rugged::Repository.discover(repo_path)
 rescue Rugged::RepositoryError => e
   puts "Error: #{e.message}"
   exit 1
@@ -36,8 +41,11 @@ end
 # Fetch local and remote branches
 branches = repo.branches.each(:local).to_a + repo.branches.each(:remote).to_a
 
+# Fetch commit times for sorting
+branch_commits = branches.map { |branch| [branch, repo.lookup(branch.target_id)] }
+
 # Sort branches by committer date
-branches.sort_by! { |branch| -branch.target.time.to_i }
+branch_commits.sort_by! { |branch, commit| -commit.time.to_i }
 
 # Initialize TTY Prompt and Pastel for coloring
 prompt = TTY::Prompt.new
@@ -47,31 +55,30 @@ pastel = Pastel.new
 branch_details = {}
 
 # Calculate the maximum lengths for formatting
-max_refname_length = branches.map { |branch| branch.name.length }.max
-max_committer_relative_length = branches.map { |branch| time_ago_in_words(branch.target.time).length }.max
-max_authorname_length = branches.map { |branch| branch.target.author[:name].length }.max
+max_branch_name_length = branches.map { |branch| branch.name.length }.max
+max_committer_relative_length = branch_commits.map { |_, commit| time_ago_in_words(commit.time).length }.max
+max_author_name_length = branch_commits.map { |_, commit| commit.author[:name].length }.max
 
 # Loop through each branch and store the details in the hash
-branches.each do |branch|
+branch_commits.each do |branch, commit|
   head = branch.head? ? '*' : ' '
-  refname = branch.name
-  commit = branch.target
+  branch_name = branch.name
   committer_relative = time_ago_in_words(commit.time)
-  authorname = commit.author[:name]
-  objectname = commit.oid[0..6]
+  author_name = commit.author[:name]
+  object_name = commit.oid[0..6]
   subject = commit.message.split("\n").first
 
   # Color each part individually
-  colored_refname = pastel.yellow(refname.ljust(max_refname_length))
+  colored_branch_name = pastel.yellow(branch_name.ljust(max_branch_name_length))
   colored_committer_relative = pastel.green(committer_relative.ljust(max_committer_relative_length))
-  colored_authorname = pastel.blue(authorname.ljust(max_authorname_length))
-  colored_objectname = pastel.red(objectname)
+  colored_author_name = pastel.blue(author_name.ljust(max_author_name_length))
+  colored_object_name = pastel.red(object_name)
   colored_head = pastel.cyan(head)
   colored_subject = pastel.white(subject)
   colored_by = pastel.white('by')
 
-  summary_detail = "#{colored_refname}   #{colored_committer_relative} #{colored_by} #{colored_authorname}   #{colored_objectname} #{colored_subject}"
-  full_detail = "#{colored_head} #{colored_refname}\n      #{colored_committer_relative} #{colored_authorname}\n      #{colored_objectname} #{colored_subject}\n"
+  summary_detail = "#{colored_branch_name}   #{colored_committer_relative} #{colored_by} #{colored_author_name}   #{colored_object_name} #{colored_subject}"
+  full_detail = "#{colored_head} #{colored_branch_name}\n      #{colored_committer_relative} #{colored_author_name}\n      #{colored_object_name} #{colored_subject}\n"
 
   branch_details[summary_detail] = { branch: branch, detail: full_detail }
 end
@@ -85,13 +92,7 @@ end
 
 # Retrieve the selected branch from the hash
 selected_branch = selected_summary_detail[:branch]
-selected_detail = selected_summary_detail[:detail]
-
-# Print the selected branch details
-puts "You selected the branch: #{selected_branch.name}"
-puts selected_detail
 
 # Checkout the selected branch
 repo.checkout(selected_branch.name)
-puts "Checked out to branch: #{selected_branch.name}"
-
+puts "Checked out branch #{selected_branch.name}"
