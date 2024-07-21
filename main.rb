@@ -1,40 +1,7 @@
 #!/usr/bin/env ruby
 
-#require 'cli/ui'
-#require 'git'
-#
-#puts 'hello world'
-#
-## CLI::UI::Prompt.ask('What language/framework do you use?') do |handler|
-##   handler.option('rails')  { |selection| selection }
-##   handler.option('go')     { |selection| selection }
-##   handler.option('ruby')   { |selection| selection }
-##   handler.option('python') { |selection| selection }
-## end
-#
-#working_dir = '.'
-#git = Git.open(working_dir)
-#
-##g.index
-##g.index.readable?
-##g.index.writable?
-##g.repo
-#
-## git.log.each {|l| puts l.sha }
-#  #.max_count(:all)
-#  #.object('README.md')
-#  #.since('10 years ago')
-#  #.between('v1.0.7', 'HEAD')
-#  #.map { |commit| commit.sha }
-#
-#puts git.branch
-#
-#git.branches.each { |branch|
-#  puts branch
-#  puts ''
-#}
-
 require 'rugged'
+require 'cli/ui'
 
 # Define a method for relative time display
 def time_ago_in_words(time)
@@ -72,7 +39,13 @@ blue = "\e[34m"
 red = "\e[31m"
 reset = "\e[0m"
 
-# Loop through each branch and print the details
+# Initialize CLI::UI
+CLI::UI::StdoutRouter.enable
+
+# Define a hash to store branch details for selection
+branch_details = {}
+
+# Loop through each branch and store the details in the hash
 branches.each do |branch|
   head = branch.head? ? '*' : ' '
   refname = branch.name
@@ -82,6 +55,34 @@ branches.each do |branch|
   objectname = branch.target.oid[0..6]
   subject = branch.target.message.split("\n").first
 
-  puts "#{cyan}#{head} #{yellow}#{refname}\n      #{green}#{committer_relative} #{blue}#{authorname}\n      #{red}#{objectname} #{reset}#{subject}\n"
+  summary_detail = "#{refname} - #{committer_relative} by #{authorname}"
+  full_detail = "#{cyan}#{head} #{yellow}#{refname}\n      #{green}#{committer_relative} #{blue}#{authorname}\n      #{red}#{objectname} #{reset}#{subject}\n"
+
+  branch_details[summary_detail] = { branch: branch, detail: full_detail }
 end
+
+# Function to display branch details
+def display_branch_details(details)
+  puts details
+end
+
+# Ask the user to select a branch
+selected_summary_detail = CLI::UI::Prompt.ask('Select a branch:') do |handler|
+  branch_details.each do |summary, details|
+    handler.option(summary) { summary }
+  end
+end
+
+# Retrieve the selected branch from the hash
+selected_branch = branch_details[selected_summary_detail][:branch]
+selected_detail = branch_details[selected_summary_detail][:detail]
+
+# Print the selected branch details
+CLI::UI::Frame.open('Branch Details') do
+  display_branch_details(selected_detail)
+end
+
+# Checkout the selected branch
+repo.checkout(selected_branch.name)
+puts "Checked out to branch: #{selected_branch.name}"
 

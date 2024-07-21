@@ -1,9 +1,6 @@
-# Gemfile
-
-source 'https://rubygems.org'  # where gems will be downloaded from
-ruby '3.3.3'  # ruby version, change for the one you use
+source 'https://rubygems.org'
+ruby '3.3.3'
 
 gem 'cli-ui'
-#gem 'git'
 gem 'rugged'
 

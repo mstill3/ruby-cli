@@ -1,16 +1,16 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    cli-ui (2.2.3)
     rugged (1.7.2)
+    shopify_cli (1.0.5)
 
 PLATFORMS
   ruby
   x86_64-darwin-23
 
 DEPENDENCIES
-  cli-ui
   rugged
+  shopify_cli
 
 RUBY VERSION
    ruby 3.3.3p89
