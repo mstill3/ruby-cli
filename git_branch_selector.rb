@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-#!/usr/bin/env ruby
-
 require 'rugged'
 require 'tty-prompt'
 require 'pastel'
@@ -42,7 +40,20 @@ end
 branches = repo.branches.each(:local).to_a + repo.branches.each(:remote).to_a
 
 # Fetch commit times for sorting
-branch_commits = branches.map { |branch| [branch, repo.lookup(branch.target_id)] }
+branch_commits = branches.map do |branch|
+  begin
+    commit = repo.lookup(branch.target_id)
+    if valid_oid?(commit.oid)
+      [branch, commit]
+    else
+      #puts "Invalid OID for branch #{branch.name}: #{commit.oid}"
+      nil
+    end
+  rescue Rugged::InvalidError => e
+    puts "Error looking up commit for branch #{branch.name}: #{e.message}"
+    nil
+  end
+end.compact
 
 # Sort branches by committer date
 branch_commits.sort_by! { |branch, commit| -commit.time.to_i }
